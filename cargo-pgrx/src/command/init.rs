@@ -13,8 +13,8 @@ use crate::CommandExecute;
 use eyre::{eyre, WrapErr};
 use owo_colors::OwoColorize;
 use pgrx_pg_config::{
-    get_c_locale_flags, prefix_path, PgConfig, PgConfigSelector, Pgrx, PgrxHomeError,
-    SUPPORTED_MAJOR_VERSIONS,
+    get_c_locale_flags, prefix_path, PgConfig, PgConfigSelector, PgDistribution, Pgrx,
+    PgrxHomeError, SUPPORTED_MAJOR_VERSIONS,
 };
 use rayon::prelude::*;
 
@@ -226,13 +226,28 @@ fn download_postgres(
     }
     let mut buf = Vec::new();
     let _count = http_response.into_reader().read_to_end(&mut buf)?;
-    let pgdir = untar(&buf, pgrx_home, pg_config)?;
+    let pgdir = untar(
+        &buf,
+        if url.ends_with(".gz") { TarCompressAlg::Gzip } else { TarCompressAlg::Bzip2 },
+        pgrx_home,
+        pg_config,
+    )?;
     configure_postgres(pg_config, &pgdir, init)?;
     make_postgres(pg_config, &pgdir)?;
     make_install_postgres(pg_config, &pgdir) // returns a new PgConfig object
 }
 
-fn untar(bytes: &[u8], pgrxdir: &PathBuf, pg_config: &PgConfig) -> eyre::Result<PathBuf> {
+enum TarCompressAlg {
+    Bzip2,
+    Gzip,
+}
+
+fn untar(
+    bytes: &[u8],
+    alg: TarCompressAlg,
+    pgrxdir: &PathBuf,
+    pg_config: &PgConfig,
+) -> eyre::Result<PathBuf> {
     let mut pgdir = pgrxdir.clone();
     pgdir.push(format!("{}.{}", pg_config.major_version()?, pg_config.minor_version()?));
     if pgdir.exists() {
@@ -253,7 +268,11 @@ fn untar(bytes: &[u8], pgrxdir: &PathBuf, pg_config: &PgConfig) -> eyre::Result<
         .arg("-C")
         .arg(&pgdir)
         .arg("--strip-components=1")
-        .arg("-xjf")
+        .arg(match alg {
+            TarCompressAlg::Gzip => "--gzip",
+            TarCompressAlg::Bzip2 => "--bzip2",
+        })
+        .arg("-xf")
         .arg("-")
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
@@ -289,6 +308,12 @@ fn configure_postgres(pg_config: &PgConfig, pgdir: &PathBuf, init: &Init) -> eyr
         .arg(format!("--with-pgport={}", pg_config.port()?))
         .arg("--enable-debug")
         .arg("--enable-cassert");
+
+    if pg_config.distribution()? == PgDistribution::Greenplum {
+        command.arg("--disable-orca"); // orca need extra dependencies
+        command.arg("--disable-gpcloud"); // gpcloud need extra dependencies
+    }
+
     for flag in init.configure_flag.iter() {
         command.arg(flag);
     }
@@ -336,7 +361,11 @@ fn make_postgres(pg_config: &PgConfig, pgdir: &PathBuf) -> eyre::Result<()> {
     command
         .arg("-j")
         .arg(num_cpus.to_string())
-        .arg("world-bin")
+        .arg(match pg_config.distribution()? {
+            // some extension in contrib is not compileable in greenplum
+            PgDistribution::Greenplum => "all",
+            PgDistribution::PostgresSQL => "world-bin",
+        })
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .stdin(std::process::Stdio::null())
@@ -375,7 +404,10 @@ fn make_install_postgres(version: &PgConfig, pgdir: &PathBuf) -> eyre::Result<Pg
     let mut command = std::process::Command::new("make");
 
     command
-        .arg("install-world-bin")
+        .arg(match version.distribution()? {
+            PgDistribution::Greenplum => "install",
+            PgDistribution::PostgresSQL => "install-world-bin",
+        })
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .stdin(std::process::Stdio::null())

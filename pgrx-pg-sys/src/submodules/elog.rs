@@ -445,5 +445,14 @@ macro_rules! check_for_interrupts {
                 $crate::ProcessInterrupts();
             }
         }
+
+
+        #[cfg(any(feature = "greenplum7"))]
+        #[allow(unused_unsafe)]
+        unsafe {
+            if $crate::InterruptPending != 0 {
+                $crate::ProcessInterrupts(std::file!(), std::line!());
+            }
+        }
     };
 }

@@ -587,6 +587,24 @@ impl<'a> Into<pg_sys::BackgroundWorker> for &'a BackgroundWorkerBuilder {
             bgw_notify_pid: self.bgw_notify_pid,
         };
 
+        #[cfg(any(feature = "greenplum7",))]
+        let bgw = pg_sys::BackgroundWorker {
+            bgw_name: RpgffiChar::from(&self.bgw_name[..]).0,
+            bgw_type: RpgffiChar::from(&self.bgw_type[..]).0,
+            bgw_flags: self.bgw_flags.bits(),
+            bgw_start_time: self.bgw_start_time as u32,
+            bgw_restart_time: match self.bgw_restart_time {
+                None => -1,
+                Some(d) => d.as_secs() as i32,
+            },
+            bgw_library_name: RpgffiChar::from(&self.bgw_library_name[..]).0,
+            bgw_function_name: RpgffiChar::from(&self.bgw_function_name[..]).0,
+            bgw_main_arg: self.bgw_main_arg,
+            bgw_extra: RpgffiChar128::from(&self.bgw_extra[..]).0,
+            bgw_notify_pid: self.bgw_notify_pid,
+            bgw_start_rule: 0,
+        };
+
         bgw
     }
 }

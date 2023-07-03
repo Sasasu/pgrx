@@ -9,6 +9,11 @@ use pgrx::prelude::*;
 
 pgrx::pg_module_magic!();
 
+// use jemallocator to avoid sbrk conflict.
+// there are 2 allocer in one process.
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 #[pg_extern]
 fn return_static() -> &'static str {
     "This is a static string xxx"

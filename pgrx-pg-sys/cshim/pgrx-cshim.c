@@ -71,3 +71,22 @@ PGDLLEXPORT bool pgrx_SpinLockFree(slock_t *lock);
 bool pgrx_SpinLockFree(slock_t *lock) {
     return SpinLockFree(lock);
 }
+
+#ifdef GP_VERSION_NUM
+PGDLLEXPORT HeapTuple heap_copytuple(HeapTuple tuple);
+HeapTuple heap_copytuple(HeapTuple tuple)
+{
+	return heaptuple_copy_to(tuple, NULL, NULL);
+}
+
+PGDLLEXPORT HeapTuple heap_form_tuple(TupleDesc tupleDescriptor, Datum *values, bool *isnull);
+HeapTuple heap_form_tuple(TupleDesc tupleDescriptor, Datum *values, bool *isnull)
+{
+	return heaptuple_form_to(tupleDescriptor, values, isnull, NULL, NULL);
+}
+
+PGDLLEXPORT MemoryContextDelete(MemoryContext context, const char* sfile, const char *func, int sline);
+MemoryContextDelete(MemoryContext context, const char* sfile, const char *func, int sline) {
+	return MemoryContextDeleteImpl(context, __FILE__, PG_FUNCNAME_MACRO, __LINE__);
+}
+#endif // GP_VERSION_NUM

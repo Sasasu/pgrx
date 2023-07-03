@@ -32,6 +32,18 @@ use core::ffi::CStr;
 use core::ptr::NonNull;
 use std::os::raw::c_char;
 
+#[cfg(all(feature = "pg12"))]
+#[pgrx_macros::pg_guard]
+extern "C" {
+    pub fn heap_copytuple(tuple: HeapTuple) -> HeapTuple;
+    pub fn heap_form_tuple(
+        tupleDescriptor: TupleDesc,
+        values: *mut Datum,
+        isnull: *mut bool,
+    ) -> HeapTuple;
+}
+
+
 // for convenience we pull up everything submodules exposes
 pub use submodules::*;
 
@@ -75,7 +87,16 @@ mod pg15 {
 #[cfg(all(feature = "pg15", docsrs))]
 mod pg15;
 
+#[cfg(all(feature = "greenplum7", not(docsrs)))]
+mod greenplum7 {
+    include!(concat!(env!("OUT_DIR"), "/greenplum7.rs"));
+}
+#[cfg(all(feature = "greenplum7", docsrs))]
+mod greenplum7;
+
 // export each module publicly
+#[cfg(feature = "greenplum7")]
+pub use greenplum7::*;
 #[cfg(feature = "pg11")]
 pub use pg11::*;
 #[cfg(feature = "pg12")]
@@ -122,8 +143,16 @@ mod pg15_oids {
 }
 #[cfg(all(feature = "pg15", docsrs))]
 mod pg15_oids;
+#[cfg(all(feature = "greenplum7", not(docsrs)))]
+mod greenplum7_oids {
+    include!(concat!(env!("OUT_DIR"), "/greenplum7_oids.rs"));
+}
+#[cfg(all(feature = "greenplum7", docsrs))]
+mod greenplum7;
 
 // export that module publicly
+#[cfg(feature = "greenplum7")]
+pub use greenplum7_oids::*;
 #[cfg(feature = "pg11")]
 pub use pg11_oids::*;
 #[cfg(feature = "pg12")]
@@ -155,6 +184,9 @@ pub use internal::pg14::*;
 
 #[cfg(feature = "pg15")]
 pub use internal::pg15::*;
+
+#[cfg(feature = "greenplum7")]
+pub use internal::greenplum7::*;
 
 /// A trait applied to all Postgres `pg_sys::Node` types and subtypes
 pub trait PgNode: seal::Sealed {

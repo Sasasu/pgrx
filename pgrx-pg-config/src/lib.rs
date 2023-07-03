@@ -55,22 +55,50 @@ pub fn get_c_locale_flags() -> &'static [&'static str] {
 mod path_methods;
 pub use path_methods::{get_target_dir, prefix_path};
 
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+pub enum PgDistribution {
+    PostgresSQL,
+    Greenplum,
+}
+
+impl Display for PgDistribution {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::PostgresSQL => "pg",
+                Self::Greenplum => "greenplum",
+            }
+        )
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct PgVersion {
+    distribution: PgDistribution,
     major: u16,
     minor: u16,
     url: Url,
 }
 
 impl PgVersion {
-    pub fn new(major: u16, minor: u16, url: Url) -> PgVersion {
-        PgVersion { major, minor, url }
+    pub fn new(distribution: PgDistribution, major: u16, minor: u16, url: Url) -> PgVersion {
+        PgVersion { distribution, major, minor, url }
+    }
+
+    pub fn semantic_version(&self) -> (u16, u16) {
+        (self.major, self.minor)
+    }
+
+    pub fn distribution(&self) -> PgDistribution {
+        self.distribution
     }
 }
 
 impl Display for PgVersion {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}", self.major, self.minor)
+        write!(f, "{}-{}.{}", self.distribution, self.major, self.minor)
     }
 }
 
@@ -182,7 +210,10 @@ impl PgConfig {
     }
 
     pub fn label(&self) -> eyre::Result<String> {
-        Ok(format!("pg{}", self.major_version()?))
+        match self.distribution()? {
+            PgDistribution::Greenplum => Ok(format!("greenplum7")),
+            PgDistribution::PostgresSQL => Ok(format!("pg{}", self.major_version()?)),
+        }
     }
 
     pub fn path(&self) -> Option<PathBuf> {
@@ -235,6 +266,14 @@ impl PgConfig {
         match &self.version {
             Some(version) => Ok(version.minor),
             None => Ok(self.get_version()?.1),
+        }
+    }
+
+    pub fn distribution(&self) -> eyre::Result<PgDistribution> {
+        match &self.version {
+            Some(version) => Ok(version.distribution),
+            // default
+            None => Ok(PgDistribution::PostgresSQL),
         }
     }
 
