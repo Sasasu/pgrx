@@ -434,7 +434,7 @@ macro_rules! check_for_interrupts {
         #[allow(unused_unsafe)]
         unsafe {
             if $crate::InterruptPending {
-                $crate::ProcessInterrupts();
+                $crate::ProcessInterrupts("".as_ptr() as *const u8, 0);
             }
         }
 
@@ -442,7 +442,7 @@ macro_rules! check_for_interrupts {
         #[allow(unused_unsafe)]
         unsafe {
             if $crate::InterruptPending != 0 {
-                $crate::ProcessInterrupts();
+                $crate::ProcessInterrupts("".as_ptr() as *const u8, 0);
             }
         }
     };

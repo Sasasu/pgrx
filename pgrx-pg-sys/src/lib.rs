@@ -28,6 +28,22 @@ std::compile_error!("exactly one one feature must be provided (pg11, pg12, pg13,
 
 pub mod submodules;
 
+#[cfg(all(feature = "pg12"))]
+#[cfg(feature = "cshim")]
+#[pgrx_macros::pg_guard]
+extern "C" {
+    #[link_name = "pgrx_heap_copytuple"]
+    pub fn heap_copytuple(tuple: HeapTuple) -> HeapTuple;
+    #[link_name = "pgrx_heap_form_tuple"]
+    pub fn heap_form_tuple(
+        tupleDescriptor: TupleDesc,
+        values: *mut Datum,
+        isnull: *mut bool,
+    ) -> HeapTuple;
+    #[link_name = "pgrx_MemoryContextDelete"]
+    pub fn MemoryContextDelete(context: MemoryContext);
+}
+
 use core::ffi::CStr;
 use core::ptr::NonNull;
 use std::os::raw::c_char;

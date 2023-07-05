@@ -71,3 +71,18 @@ PGDLLEXPORT bool pgrx_SpinLockFree(slock_t *lock);
 bool pgrx_SpinLockFree(slock_t *lock) {
     return SpinLockFree(lock);
 }
+
+PGDLLEXPORT HeapTuple pgrx_heap_copytuple(HeapTuple tuple);
+HeapTuple pgrx_heap_copytuple(HeapTuple tuple) {
+    return heaptuple_copy_to(tuple, NULL, NULL);
+}
+
+PGDLLEXPORT HeapTuple pgrx_heap_form_tuple(TupleDesc tupleDescriptor, Datum *values, bool *isnull);
+HeapTuple pgrx_heap_form_tuple(TupleDesc tupleDescriptor, Datum *values, bool *isnull) {
+    return heaptuple_form_to(tupleDescriptor, values, isnull, NULL, NULL);
+}
+
+PGDLLEXPORT void pgrx_MemoryContextDelete(MemoryContext context);
+void pgrx_MemoryContextDelete(MemoryContext context) {
+    return MemoryContextDeleteImpl(context, __FILE__, PG_FUNCNAME_MACRO, __LINE__);
+}

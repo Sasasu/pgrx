@@ -585,6 +585,7 @@ impl<'a> Into<pg_sys::BackgroundWorker> for &'a BackgroundWorkerBuilder {
             bgw_main_arg: self.bgw_main_arg,
             bgw_extra: RpgffiChar128::from(&self.bgw_extra[..]).0,
             bgw_notify_pid: self.bgw_notify_pid,
+            bgw_start_rule: None,
         };
 
         bgw

@@ -222,12 +222,13 @@ macro_rules! pg_magic_func {
             #[cfg(any(feature = "pg11", feature = "pg12"))]
             const MY_MAGIC: pgrx::pg_sys::Pg_magic_struct = pgrx::pg_sys::Pg_magic_struct {
                 len: size_of::<pgrx::pg_sys::Pg_magic_struct>() as i32,
-                version: pgrx::pg_sys::PG_VERSION_NUM as i32 / 100,
+                version: 70000 as i32 / 100,
                 funcmaxargs: pgrx::pg_sys::FUNC_MAX_ARGS as i32,
                 indexmaxkeys: pgrx::pg_sys::INDEX_MAX_KEYS as i32,
                 namedatalen: pgrx::pg_sys::NAMEDATALEN as i32,
                 float4byval: pgrx::pg_sys::USE_FLOAT4_BYVAL as i32,
                 float8byval: cfg!(target_pointer_width = "64") as i32,
+                product: 2180 as i32,
             };
 
             #[cfg(any(feature = "pg13", feature = "pg14"))]
